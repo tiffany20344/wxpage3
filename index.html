@@ -13,25 +13,33 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            overflow: hidden;
         }
         
         #loading {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: white;
             z-index: 1000;
+            transition: opacity 0.3s;
         }
         
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            border-left-color: #667eea;
+            border-top-color: #667eea;
             animation: spin 1s ease infinite;
-            margin: 0 auto 15px;
+            margin-bottom: 15px;
         }
         
         @keyframes spin {
@@ -46,109 +54,221 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
+            background: white;
         }
         
         #content-frame {
             width: 100%;
             height: 100%;
             border: none;
+            display: block;
+        }
+        
+        .error-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 1001;
+        }
+        
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ff4757;
+        }
+        
+        .retry-btn {
+            margin-top: 20px;
+            padding: 10px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        
+        .retry-btn:hover {
+            background: #5a67d8;
         }
     </style>
 </head>
 <body>
     <div id="loading">
         <div class="spinner"></div>
-        <p>正在加载内容...</p>
+        <p>正在加载直播内容...</p>
+    </div>
+    
+    <div id="error" class="error-container">
+        <div class="error-icon">⚠️</div>
+        <h3 style="margin-bottom: 10px; color: #333;">加载失败</h3>
+        <p id="error-message" style="color: #666; margin-bottom: 20px;">请检查网络连接后重试</p>
+        <button class="retry-btn" onclick="retryLoad()">重新加载</button>
+        <p style="margin-top: 15px; font-size: 14px; color: #999;">如果多次失败，请尝试更换网络环境</p>
     </div>
     
     <div id="frame-container">
-        <!-- 修改沙箱属性，添加 allow-modals -->
+        <!-- 简化沙箱属性，移除可能导致问题的部分 -->
         <iframe id="content-frame" 
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"
-                allow="fullscreen"
-                referrerpolicy="no-referrer-when-downgrade">
+                sandbox="allow-same-origin allow-scripts allow-forms"
+                allow="fullscreen; autoplay; microphone; camera"
+                referrerpolicy="strict-origin-when-cross-origin"
+                loading="eager">
         </iframe>
     </div>
     
     <script>
-        // 要嵌套的网页地址
-        const targetUrl = "https://app152349eabe3b-h5.v24c.qxcze.cn/sl/8c3db28a2450498348493855a2ebd1b0dbef3fd35d7c247e";
+        // 目标URL
+        const targetUrl = "https://app152349eabe3b-h5.v24c.ommnp.cn/sl/8c3db28a2450498348493855a2ebd1b0dbef3fd35d7c247e";
         
-        // 加载完成后隐藏加载动画
-        window.addEventListener('DOMContentLoaded', function() {
-            const iframe = document.getElementById('content-frame');
-            const loading = document.getElementById('loading');
+        // DOM元素
+        const iframe = document.getElementById('content-frame');
+        const loading = document.getElementById('loading');
+        const errorContainer = document.getElementById('error');
+        const errorMessage = document.getElementById('error-message');
+        const frameContainer = document.getElementById('frame-container');
+        
+        // 初始化
+        window.addEventListener('DOMContentLoaded', init);
+        
+        async function init() {
+            console.log('开始加载页面...');
             
             // 设置超时处理
-            let isLoaded = false;
             const timeout = setTimeout(() => {
-                if (!isLoaded) {
-                    showError('加载超时，请检查网络连接');
+                showError('加载超时，请检查网络连接');
+            }, 20000); // 20秒超时
+            
+            // 设置iframe事件监听
+            iframe.addEventListener('load', function() {
+                clearTimeout(timeout);
+                console.log('iframe加载完成');
+                hideLoading();
+            });
+            
+            iframe.addEventListener('error', function(e) {
+                clearTimeout(timeout);
+                console.error('iframe加载错误:', e);
+                showError('页面加载失败，请检查URL是否正确');
+            });
+            
+            // 监听来自iframe的消息（用于调试）
+            window.addEventListener('message', function(event) {
+                console.log('收到iframe消息:', event.data);
+            });
+            
+            // 监听页面可见性变化
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    console.log('页面进入后台');
+                } else {
+                    console.log('页面回到前台');
                 }
-            }, 15000); // 15秒超时
+            });
             
-            iframe.onload = function() {
-                isLoaded = true;
-                clearTimeout(timeout);
-                setTimeout(() => {
-                    loading.style.display = 'none';
-                }, 500);
-            };
-            
-            iframe.onerror = function() {
-                isLoaded = true;
-                clearTimeout(timeout);
-                showError('无法加载目标页面，请检查网络或刷新重试');
-            };
-            
-            // 设置 iframe 的 src（添加时间戳避免缓存）
-            iframe.src = targetUrl + (targetUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
-            
-            // 错误显示函数
-            function showError(message) {
-                loading.innerHTML = `
-                    <div style="color: #ff4757; margin-bottom: 15px;">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="15" y1="9" x2="9" y2="15"></line>
-                            <line x1="9" y1="9" x2="15" y2="15"></line>
-                        </svg>
-                    </div>
-                    <h3 style="margin-bottom: 10px;">加载失败</h3>
-                    <p style="margin-bottom: 20px; color: #666;">${message}</p>
-                    <button onclick="location.reload()" style="
-                        margin-top: 10px; 
-                        padding: 8px 24px; 
-                        background: #667eea; 
-                        color: white; 
-                        border: none; 
-                        border-radius: 4px; 
-                        cursor: pointer;
-                        font-size: 14px;
-                    ">
-                        刷新页面
-                    </button>
-                `;
+            // 开始加载
+            await loadIframe();
+        }
+        
+        // 加载iframe
+        async function loadIframe() {
+            try {
+                // 使用try-catch包装iframe的src设置
+                iframe.src = targetUrl;
+                console.log('正在加载URL:', targetUrl);
+            } catch (error) {
+                console.error('设置iframe src时出错:', error);
+                showError('页面配置错误，请刷新重试');
             }
+        }
+        
+        // 重新加载
+        function retryLoad() {
+            hideError();
+            showLoading();
+            
+            // 清除iframe的src，然后重新设置
+            iframe.src = '';
+            
+            // 添加随机参数避免缓存
+            const timestamp = new Date().getTime();
+            const random = Math.random().toString(36).substring(7);
+            const retryUrl = targetUrl + 
+                (targetUrl.includes('?') ? '&' : '?') + 
+                `retry_${timestamp}=${random}`;
+            
+            // 短暂延迟后重新加载
+            setTimeout(() => {
+                iframe.src = retryUrl;
+                console.log('重新加载URL:', retryUrl);
+            }, 300);
+        }
+        
+        // 显示加载状态
+        function showLoading() {
+            loading.style.display = 'flex';
+            loading.style.opacity = '1';
+            errorContainer.style.display = 'none';
+            frameContainer.style.display = 'block';
+        }
+        
+        // 隐藏加载状态
+        function hideLoading() {
+            loading.style.opacity = '0';
+            setTimeout(() => {
+                loading.style.display = 'none';
+            }, 300);
+        }
+        
+        // 显示错误
+        function showError(message) {
+            errorMessage.textContent = message || '加载失败，请重试';
+            loading.style.display = 'none';
+            errorContainer.style.display = 'flex';
+            frameContainer.style.display = 'none';
+            
+            // 打印详细错误信息到控制台
+            console.error('页面加载错误:', message);
+        }
+        
+        // 隐藏错误
+        function hideError() {
+            errorContainer.style.display = 'none';
+        }
+        
+        // 全局错误处理
+        window.addEventListener('error', function(event) {
+            console.error('全局错误捕获:', event.error);
+            // 不显示给用户，避免重复提示
         });
         
-        // 添加键盘快捷键支持
-        window.addEventListener('keydown', function(e) {
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('未处理的Promise拒绝:', event.reason);
+        });
+        
+        // 提供全局重载函数
+        window.retryLoad = retryLoad;
+        
+        // 添加键盘快捷键
+        document.addEventListener('keydown', function(e) {
             // F5 刷新
             if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
                 e.preventDefault();
-                location.reload();
+                retryLoad();
             }
-            // ESC 返回（如果 iframe 支持）
-            if (e.key === 'Escape') {
-                try {
-                    const iframe = document.getElementById('content-frame');
-                    if (iframe.contentWindow) {
-                        iframe.contentWindow.history.back();
-                    }
-                } catch (e) {
-                    // 跨域限制，忽略
-                }
+            // ESC 隐藏错误（如果可见）
+            if (e.key === 'Escape' && errorContainer.style.display === 'flex') {
+                retryLoad();
             }
         });
     </script>
