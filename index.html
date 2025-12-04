@@ -1,40 +1,108 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>正在打开...</title>
-<style>
-body { font-family: Arial; text-align: center; padding-top: 50px; }
-button { padding: 14px 22px; font-size: 18px; border-radius: 10px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态嵌套页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 1000;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #667eea;
+            animation: spin 1s ease infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #frame-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        #content-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
 </head>
 <body>
-<h2>正在为你打开页面…</h2>
-<p>若未自动跳转，请点击 “进入”</p>
-<button id="go">进入</button>
-
-<script>
-// 目标 URL 采用分段拼接（微信无法静态分析）
-// 不把完整链接暴露在 HTML 中
-const part1 = "https://app152349eabe3b-h5.v24c.ybned.cn/sl/";
-const part2 = "8c3db28a2450498348493855a2ebd1b0dbef3fd35d7c247e";
-
-const finalUrl = part1 + part2;
-
-// 使用不可被微信追踪的方式跳转
-setTimeout(() => {
-    const a = document.createElement('a');
-    a.href = finalUrl;
-    a.click();
-}, 1500);
-
-// 用户点击手动触发（成功率更高）
-document.getElementById('go').onclick = function() {
-    const a = document.createElement('a');
-    a.href = finalUrl;
-    a.click();
-};
-</script>
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>正在加载内容...</p>
+    </div>
+    
+    <div id="frame-container">
+        <iframe id="content-frame" 
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                referrerpolicy="no-referrer-when-downgrade">
+        </iframe>
+    </div>
+    
+    <script>
+        // 要嵌套的网页地址
+        const targetUrl = "https://app152349eabe3b-h5.v24c.ommnp.cn/sl/8c3db28a2450498348493855a2ebd1b0dbef3fd35d7c247e";
+        
+        // 加载完成后隐藏加载动画
+        window.addEventListener('DOMContentLoaded', function() {
+            const iframe = document.getElementById('content-frame');
+            const loading = document.getElementById('loading');
+            
+            iframe.onload = function() {
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                }, 500);
+            };
+            
+            iframe.onerror = function() {
+                loading.innerHTML = `
+                    <div style="color: #ff4757; margin-bottom: 15px;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="15" y1="9" x2="9" y2="15"></line>
+                            <line x1="9" y1="9" x2="15" y2="15"></line>
+                        </svg>
+                    </div>
+                    <h3>加载失败</h3>
+                    <p>无法加载目标页面，请检查网络或刷新重试</p>
+                    <button onclick="location.reload()" style="margin-top: 10px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        刷新页面
+                    </button>
+                `;
+            };
+            
+            // 设置 iframe 的 src
+            iframe.src = targetUrl;
+        });
+    </script>
 </body>
 </html>
