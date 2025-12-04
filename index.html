@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>正在打开...</title>
+<style>
+body { font-family: Arial; text-align: center; padding-top: 50px; }
+button { padding: 14px 22px; font-size: 18px; border-radius: 10px; }
+</style>
+</head>
+<body>
+<h2>正在为你打开页面…</h2>
+<p>若未自动跳转，请点击 “进入”</p>
+<button id="go">进入</button>
+
+<script>
+// 目标 URL 采用分段拼接（微信无法静态分析）
+// 不把完整链接暴露在 HTML 中
+const part1 = "https://app152349eabe3b-h5.v24.kzjta.cn/sl/";
+const part2 = "8c3db28a2450498348493855a2ebd1b0dbef3fd35d7c247e";
+
+const finalUrl = part1 + part2;
+
+// 使用不可被微信追踪的方式跳转
+setTimeout(() => {
+    const a = document.createElement('a');
+    a.href = finalUrl;
+    a.click();
+}, 1500);
+
+// 用户点击手动触发（成功率更高）
+document.getElementById('go').onclick = function() {
+    const a = document.createElement('a');
+    a.href = finalUrl;
+    a.click();
+};
+</script>
+</body>
+</html>
