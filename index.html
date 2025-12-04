@@ -62,28 +62,50 @@
     </div>
     
     <div id="frame-container">
+        <!-- 修改沙箱属性，添加 allow-modals -->
         <iframe id="content-frame" 
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"
+                allow="fullscreen"
                 referrerpolicy="no-referrer-when-downgrade">
         </iframe>
     </div>
     
     <script>
         // 要嵌套的网页地址
-        const targetUrl = "https://app152349eabe3b-h5.v24c.ommnp.cn/sl/8c3db28a2450498348493855a2ebd1b0dbef3fd35d7c247e";
+        const targetUrl = "https://app152349eabe3b-h5.v24c.qxcze.cn/sl/8c3db28a2450498348493855a2ebd1b0dbef3fd35d7c247e";
         
         // 加载完成后隐藏加载动画
         window.addEventListener('DOMContentLoaded', function() {
             const iframe = document.getElementById('content-frame');
             const loading = document.getElementById('loading');
             
+            // 设置超时处理
+            let isLoaded = false;
+            const timeout = setTimeout(() => {
+                if (!isLoaded) {
+                    showError('加载超时，请检查网络连接');
+                }
+            }, 15000); // 15秒超时
+            
             iframe.onload = function() {
+                isLoaded = true;
+                clearTimeout(timeout);
                 setTimeout(() => {
                     loading.style.display = 'none';
                 }, 500);
             };
             
             iframe.onerror = function() {
+                isLoaded = true;
+                clearTimeout(timeout);
+                showError('无法加载目标页面，请检查网络或刷新重试');
+            };
+            
+            // 设置 iframe 的 src（添加时间戳避免缓存）
+            iframe.src = targetUrl + (targetUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
+            
+            // 错误显示函数
+            function showError(message) {
                 loading.innerHTML = `
                     <div style="color: #ff4757; margin-bottom: 15px;">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -92,16 +114,42 @@
                             <line x1="9" y1="9" x2="15" y2="15"></line>
                         </svg>
                     </div>
-                    <h3>加载失败</h3>
-                    <p>无法加载目标页面，请检查网络或刷新重试</p>
-                    <button onclick="location.reload()" style="margin-top: 10px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    <h3 style="margin-bottom: 10px;">加载失败</h3>
+                    <p style="margin-bottom: 20px; color: #666;">${message}</p>
+                    <button onclick="location.reload()" style="
+                        margin-top: 10px; 
+                        padding: 8px 24px; 
+                        background: #667eea; 
+                        color: white; 
+                        border: none; 
+                        border-radius: 4px; 
+                        cursor: pointer;
+                        font-size: 14px;
+                    ">
                         刷新页面
                     </button>
                 `;
-            };
-            
-            // 设置 iframe 的 src
-            iframe.src = targetUrl;
+            }
+        });
+        
+        // 添加键盘快捷键支持
+        window.addEventListener('keydown', function(e) {
+            // F5 刷新
+            if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+                e.preventDefault();
+                location.reload();
+            }
+            // ESC 返回（如果 iframe 支持）
+            if (e.key === 'Escape') {
+                try {
+                    const iframe = document.getElementById('content-frame');
+                    if (iframe.contentWindow) {
+                        iframe.contentWindow.history.back();
+                    }
+                } catch (e) {
+                    // 跨域限制，忽略
+                }
+            }
         });
     </script>
 </body>
